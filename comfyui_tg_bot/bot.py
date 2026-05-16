@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 from datetime import datetime
 from io import BytesIO
@@ -38,13 +40,33 @@ class TelegramBotService:
 
     async def run(self) -> None:
         """Run the Telegram bot."""
+        # 1. 註冊訊息處理器，過濾掉指令 (例如 /start)，只接收純文字
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
 
-        async with self.app:
-            await self.app.initialize()
-            self.app.create_task(self._process_queue())
-            await self.app.start()
-            await self.app.updatesIssuer()
+        # 2. 初始化機器人應用程式
+        await self.app.initialize()
+        
+        # 3. 啟動機器人本體
+        await self.app.start()
+        
+        # 4. 啟動接收 Telegram 訊息的輪詢機制 (取代原本錯誤的 updatesIssuer)
+        await self.app.updater.start_polling()
+        
+        # 5. 在背景建立一個非同步任務，用來不斷處理排隊中的畫圖要求
+        asyncio.create_task(self._process_queue())
+        
+        try:
+            # 6. 建立一個無限迴圈，讓主程式永遠保持醒著，不會執行完就關閉
+            while True:
+                await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            # 7. 當我們手動終止程式 (例如按 Ctrl+C) 時，觸發取消錯誤，這裡選擇安靜地忽略
+            pass
+        finally:
+            # 8. 程式即將關閉前，安全地停止輪詢與機器人，釋放資源
+            await self.app.updater.stop()
+            await self.app.stop()
+            await self.app.shutdown()
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle incoming message from user."""

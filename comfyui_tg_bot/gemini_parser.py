@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 
-import google.generativeai as genai
+from google import genai
 
 from comfyui_tg_bot.models import GeminiParseResult
 from comfyui_tg_bot.workflow_registry import WorkflowRegistry
@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 class GeminiParser:
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.client = genai.Client(api_key=api_key)
 
     async def parse(self, user_prompt: str, workflows: WorkflowRegistry) -> GeminiParseResult:
         try:
@@ -66,7 +65,9 @@ Important:
 - If the user mentions style or composition, incorporate it into the prompts
 - Always respond with valid JSON only, no other text"""
 
-        response = self.model.generate_content(gemini_prompt)
+        response = self.client.models.generate_content(
+            model="gemini-2.0-flash", contents=gemini_prompt
+        )
         response_text = response.text.strip()
 
         try:
