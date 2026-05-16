@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 import uuid
 from typing import Any
+from urllib.parse import quote
 
 import aiohttp
 
@@ -34,8 +36,8 @@ class ComfyUIClient:
                 data = await resp.json()
                 return data.get("prompt_id", prompt_id)
 
-    async def wait_for_image(self, prompt_id: str) -> bytes:
-        """Wait for image generation to complete and return the image bytes."""
+    async def wait_for_image(self, prompt_id: str) -> tuple[bytes, str]:
+        """Wait for image generation to complete and return the image bytes and filename."""
         start_time = time.time()
         
         async with aiohttp.ClientSession() as session:
@@ -49,9 +51,9 @@ class ComfyUIClient:
                             history = await resp.json()
                             if prompt_id in history:
                                 outputs = history[prompt_id].get("outputs", {})
-                                image_data = await self._extract_image_from_outputs(session, outputs)
-                                if image_data:
-                                    return image_data
+                                result = await self._extract_image_from_outputs(session, outputs)
+                                if result:
+                                    return result
                 except (aiohttp.ClientError, asyncio.TimeoutError):
                     pass
 
@@ -59,8 +61,10 @@ class ComfyUIClient:
 
         raise TimeoutError(f"Image generation timed out after {self.timeout_seconds} seconds")
 
-    async def _extract_image_from_outputs(self, session: aiohttp.ClientSession, outputs: dict[str, Any]) -> bytes | None:
-        """Extract image bytes from ComfyUI outputs."""
+    async def _extract_image_from_outputs(
+        self, session: aiohttp.ClientSession, outputs: dict[str, Any]
+    ) -> tuple[bytes, str] | None:
+        """Extract image bytes and filename from ComfyUI outputs."""
         for output_data in outputs.values():
             if isinstance(output_data, dict):
                 images = output_data.get("images", [])
@@ -70,14 +74,19 @@ class ComfyUIClient:
                         filename = image_info.get("filename")
                         subfolder = image_info.get("subfolder", "")
                         if filename:
-                            return await self._download_image(session, filename, subfolder)
+                            image_bytes = await self._download_image(session, filename, subfolder)
+                            return (image_bytes, filename)
         return None
 
-    async def _download_image(self, session: aiohttp.ClientSession, filename: str, subfolder: str = "") -> bytes:
-        """Download image from ComfyUI server."""
-        url = f"{self.base_url}/view?filename={filename}"
+    async def _download_image(
+        self, session: aiohttp.ClientSession, filename: str, subfolder: str = ""
+    ) -> bytes:
+        """Download image from ComfyUI server with proper URL encoding."""
+        encoded_filename = quote(filename, safe="")
+        url = f"{self.base_url}/view?filename={encoded_filename}"
         if subfolder:
-            url += f"&subfolder={subfolder}"
+            encoded_subfolder = quote(subfolder, safe="")
+            url += f"&subfolder={encoded_subfolder}"
 
         async with session.get(
             url,

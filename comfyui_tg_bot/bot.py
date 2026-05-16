@@ -120,11 +120,11 @@ class TelegramBotService:
             rendered_graph = render_workflow(graph, config, parse_result)
             
             prompt_id = await self.comfyui_client.submit_prompt(rendered_graph)
-            image_bytes = await self.comfyui_client.wait_for_image(prompt_id)
+            image_bytes, original_filename = await self.comfyui_client.wait_for_image(prompt_id)
             
             self.storage.save_latest_image(image_bytes)
             
-            photo = InputFile(BytesIO(image_bytes), filename="generated.png")
+            photo = InputFile(BytesIO(image_bytes), filename=original_filename)
             await self.app.bot.send_photo(chat_id=job.chat_id, photo=photo)
             
             job.finished_at = datetime.utcnow()
