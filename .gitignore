@@ -1,0 +1,17 @@
+# 環境變數與機密資訊
+.env
+
+# Python 暫存檔
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 虛擬環境
+.venv/
+venv/
+env/
+
+# 執行期間產生的日誌與圖片 (依據 proposal.md 規劃)
+logs/
+output/

@@ -1,0 +1,63 @@
+{
+  "id": "test",
+  "name": "Test Anime Workflow",
+  "description": "測試用動漫風文生圖工作流",
+  "selection_hint": "適合動漫、二次元、角色插畫、日系風格",
+  "workflow_file": "test.json",
+  "is_default": true,
+  "fields": {
+    "positive_prompt": {
+      "required": true,
+      "target": {
+        "node_id": "6",
+        "input": "text"
+      }
+    },
+    "negative_prompt": {
+      "required": true,
+      "target": {
+        "node_id": "7",
+        "input": "text"
+      }
+    },
+    "width": {
+      "required": true,
+      "target": {
+        "node_id": "5",
+        "input": "width"
+      }
+    },
+    "height": {
+      "required": true,
+      "target": {
+        "node_id": "5",
+        "input": "height"
+      }
+    },
+    "seed": {
+      "required": false,
+      "target": {
+        "node_id": "3",
+        "input": "seed"
+      }
+    }
+  },
+  "aspect_ratios": {
+    "1:1": {
+      "width": 1024,
+      "height": 1024
+    },
+    "16:9": {
+      "width": 1344,
+      "height": 768
+    },
+    "9:16": {
+      "width": 768,
+      "height": 1344
+    }
+  },
+  "defaults": {
+    "negative_prompt": "text, watermark",
+    "aspect_ratio": "1:1"
+  }
+}
